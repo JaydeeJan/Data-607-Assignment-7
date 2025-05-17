@@ -1,0 +1,203 @@
+---
+title: "Data 607 Assignment 7"
+author: "Jayden Jiang"
+date: "2025-03-15"
+output: html_document
+---
+
+# Library
+```{r}
+library(jsonlite)
+library(htmlTable)
+library(rvest)
+library(xml2)
+library(arrow)
+library(gt)
+```
+## Create the data frame
+```{r}
+cunymart_data <- data.frame(
+  Category = c("Electronics", "Electronics", "Electronics", "Electronics", 
+               "Home Appliances", "Home Appliances", "Home Appliances", "Home Appliances",
+               "Clothing", "Clothing", "Clothing", "Clothing", "Clothing",
+               "Books", "Books", "Books", "Books",
+               "Sports Equipment", "Sports Equipment", "Sports Equipment"),
+  Item_Name = c("Smartphone", "Smartphone", "Laptop", "Laptop",
+                "Refrigerator", "Refrigerator", "Washing Machine", "Washing Machine",
+                "T-Shirt", "T-Shirt", "T-Shirt", "Jeans", "Jeans",
+                "Fiction Novel", "Fiction Novel", "Non-Fiction Guide", "Non-Fiction Guide",
+                "Basketball", "Tennis Racket", "Tennis Racket"),
+  Item_ID = c(101, 101, 102, 102, 
+              201, 201, 202, 202,
+              301, 301, 301, 302, 302,
+              401, 401, 402, 402,
+              501, 502, 502),
+  Brand = c("TechBrand", "TechBrand", "CompuBrand", "CompuBrand",
+            "HomeCool", "HomeCool", "CleanTech", "CleanTech",
+            "FashionCo", "FashionCo", "FashionCo", "DenimWorks", "DenimWorks",
+            "-", "-", "-", "-",
+            "SportsGear", "RacketPro", "RacketPro"),
+  Price = c(699.99, 699.99, 1099.99, 1099.99,
+            899.99, 899.99, 499.99, 499.99,
+            19.99, 19.99, 19.99, 49.99, 49.99,
+            14.99, 14.99, 24.99, 24.99,
+            29.99, 89.99, 89.99),
+  Variation_ID = c("101-A", "101-B", "102-A", "102-B",
+                   "201-A", "201-B", "202-A", "202-B",
+                   "301-A", "301-B", "301-C", "302-A", "302-B",
+                   "401-A", "401-B", "402-A", "402-B",
+                   "501-A", "502-A", "502-B"),
+  Variation_Details = c("Color: Black, Storage: 64GB", "Color: White, Storage: 128GB",
+                        "Color: Silver, Storage: 256GB", "Color: Space Gray, Storage: 512GB",
+                        "Color: Stainless Steel, Capacity: 20 cu ft", "Color: White, Capacity: 18 cu ft",
+                        "Type: Front Load, Capacity: 4.5 cu ft", "Type: Top Load, Capacity: 5.0 cu ft",
+                        "Color: Blue, Size: S", "Color: Red, Size: M", "Color: Green, Size: L",
+                        "Color: Dark Blue, Size: 32", "Color: Light Blue, Size: 34",
+                        "Format: Hardcover, Language: English", "Format: Paperback, Language: Spanish",
+                        "Format: eBook, Language: English", "Format: Paperback, Language: French",
+                        "Size: Size 7, Color: Orange", "Material: Graphite, Color: Black", 
+                        "Material: Aluminum, Color: Silver"),
+  stringsAsFactors = FALSE
+)
+
+head(cunymart_data)
+```
+
+## Export to Json
+```{r}
+# Convert to JSON
+json_data <- toJSON(cunymart_data, pretty = TRUE)
+
+# Write to file
+write(json_data, "cunymart_data.json")
+
+# View JSON
+cat(json_data)
+```
+
+## Import Json
+```{r}
+# Read JSON file
+imported_json <- fromJSON("cunymart_data.json")
+
+# View imported data
+head(imported_json)
+```
+
+## Export to HTML
+```{r}
+# Create HTML table
+html_table <- htmlTable(cunymart_data, 
+                        rnames = FALSE,
+                        caption = "CUNYMart Inventory Data")
+
+# Write to file
+write(html_table, "cunymart_data.html")
+
+# View HTML (in RStudio Viewer)
+html_table
+```
+
+## Import HTML
+```{r}
+# Read HTML file
+html_data <- read_html("cunymart_data.html")
+
+# Extract table
+imported_html <- html_data %>% 
+  html_node("table") %>% 
+  html_table()
+
+# View imported data
+head(imported_html)
+```
+
+
+
+## Export to XML
+```{r}
+# Create XML document
+xml_doc <- xml_new_document()
+root <- xml_add_child(xml_doc, "CUNYMartInventory")
+
+# Add records
+for (i in 1:nrow(cunymart_data)) {
+  record <- xml_add_child(root, "Item")
+  xml_add_child(record, "Category", cunymart_data$Category[i])
+  xml_add_child(record, "Item_Name", cunymart_data$Item_Name[i])
+  xml_add_child(record, "Item_ID", cunymart_data$Item_ID[i])
+  xml_add_child(record, "Brand", cunymart_data$Brand[i])
+  xml_add_child(record, "Price", cunymart_data$Price[i])
+  xml_add_child(record, "Variation_ID", cunymart_data$Variation_ID[i])
+  xml_add_child(record, "Variation_Details", cunymart_data$Variation_Details[i])
+}
+
+# Write to file
+write_xml(xml_doc, "cunymart_data.xml")
+
+# View XML
+cat(as.character(xml_doc))
+```
+
+## Import XML
+```{r}
+# Read XML file
+xml_data <- read_xml("cunymart_data.xml")
+
+# Extract data
+items <- xml_find_all(xml_data, "//Item")
+imported_xml <- data.frame(
+  Category = xml_text(xml_find_first(items, "Category")),
+  Item_Name = xml_text(xml_find_first(items, "Item_Name")),
+  Item_ID = xml_text(xml_find_first(items, "Item_ID")),
+  Brand = xml_text(xml_find_first(items, "Brand")),
+  Price = xml_text(xml_find_first(items, "Price")),
+  Variation_ID = xml_text(xml_find_first(items, "Variation_ID")),
+  Variation_Details = xml_text(xml_find_first(items, "Variation_Details")),
+  stringsAsFactors = FALSE
+)
+
+# Convert numeric columns
+imported_xml$Item_ID <- as.integer(imported_xml$Item_ID)
+imported_xml$Price <- as.numeric(imported_xml$Price)
+
+# View imported data
+head(imported_xml)
+```
+
+## Export to Parquet
+```{r}
+write_parquet(cunymart_data, "cunymart_data.parquet")
+```
+
+## Import Parquet
+```{r}
+# Read Parquet file
+imported_parquet <- read_parquet("cunymart_data.parquet")
+
+# View imported data
+head(imported_parquet)
+```
+
+
+## Summary Table 
+```{r}
+pros_cons <- data.frame(
+  Format = c("JSON", "HTML", "XML", "Parquet"),
+  Pros = c("Simple to debug, Easy to read & write, Used in APIs",
+           "Great for displaying in web browsers, Interative visualizations",
+           "Hierarchial data support, self-descriptive format",
+           "Highly compressed, Fast for big data and analytics"),
+  Cons = c("No Metadata, Harder to work with large files",
+           "Not a suitable data exchange format, Parsing is harder",
+           "Verbose and large file sizes, Harder to read",
+           "Harder to read, Complex to debug")
+)
+
+proscons_table <- gt(pros_cons) %>%
+  tab_header(
+    title = "Pros and Cons of Different Data Formats"
+  )
+
+proscons_table
+```
